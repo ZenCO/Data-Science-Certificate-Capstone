@@ -1,0 +1,41 @@
+---
+title: "Twitter Capstone"
+author: "Chase Smith"
+date: "7/24/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###BUSINESS OBJECTIVE
+
+I am using R to fully explore the data available from Twitter to help a small business understand how to be more effective in their outreach.  I am using statistical analysis and Natural Language Programming to accomplish this.
+
+I am using one of my own Twitter Accounts in order to explore the data available to any small business.
+
+
+###NECESSARY LIBRARIES
+```{r}
+library(tidyverse)
+
+```
+
+
+#DATA IMPORT
+```{r}
+TwitterData = read_csv('TwitterData.csv')
+dat = TwitterData
+```
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
