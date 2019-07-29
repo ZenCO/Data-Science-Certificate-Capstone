@@ -11,25 +11,146 @@ output:
 
 ```
 
-### BUSINESS OBJECTIVE
+
+### Business Objective
 
 I am using R to fully explore the data available from Twitter to help a small business understand how to be more effective in their outreach.  I am using statistical analysis and Natural Language Programming to accomplish this.
+
+### High Level Summary
 
 I am using one of my own Twitter Accounts in order to explore the data available to any small business.
 
 
 ### NECESSARY LIBRARIES
 ```{r}
-library(tidyverse)
+knitr::opts_chunk$set(echo = TRUE)
+library("tidyverse")
+library("tidytext")
+library("scales")
+library("wordcloud")
+library("reshape2")
+data("stop_words")
 
 ```
 
 
-#DATA IMPORT
+#Exploratory Data Analysis
 ```{r}
-TwitterData = read_csv('TwitterData.csv')
-dat = TwitterData
+raw_dat = read_csv('TwitterData.csv')
+summary(raw_dat)
 ```
+
+## Exploratory Data Analysis
+```{r}
+
+
+raw_dat = raw_dat %>%
+select(id = `Tweet id`, TweetText = 'Tweet text', 'time', 'impressions', 'engagements', 'retweets', 'replies', 'likes')
+
+summary(raw_dat)
+  
+```
+
+```{r}
+raw_dat = raw_dat %>%
+  mutate(effective = if_else(engagements > 0,
+                          "yes",
+                          if_else(impressions > 300,
+                                  "yes",
+                                  "no")))
+summary(raw_dat)
+
+```
+
+
+```{r}
+dat = raw_dat %>%
+  unnest_tokens(word, TweetText) %>%
+  anti_join(stop_words, by = 'word')
+```
+
+
+```{r}
+dat %>%
+  count(word, sort = TRUE)
+```
+
+
+```{r}
+dat = raw_dat %>%
+  unnest_tokens(word, TweetText) %>%
+  anti_join(stop_words, by = 'word') %>%
+  mutate(word = str_extract(word, "[a-z']+")) %>%
+  filter(word != 'https') %>%
+  filter(word != 't.co')
+head(dat)
+```
+
+```{r}
+dat %>%
+  count(word, sort = TRUE) %>%
+  summary()
+```
+
+### I need to figure out how to seperate all the @ data
+
+```{r}
+dat %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 10) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+```
+
+### I NEED HELP HERE
+###  THE LINE BELOW ISN"T WORKING!!!
+
+
+```{r}
+frequency = dat %>% 
+  count(effective, word) %>%
+  group_by(effective) %>%
+  mutate(proportion = n / sum(n)) %>%
+  select(-n) %>%
+  spread(effective, proportion) 
+head(frequency)
+```
+
+
+```{r}
+ggplot(frequency, aes(x = no, y = yes, color = abs(yes - no))) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
+  theme(legend.position="none") +
+  labs(y = "Word", x = NULL)
+```
+
+
+```{r}
+cor.test(x = frequency$no, y = frequency$yes)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ### Including Plots
