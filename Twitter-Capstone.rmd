@@ -8,17 +8,17 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
-###BUSINESS OBJECTIVE
+### BUSINESS OBJECTIVE
 
 I am using R to fully explore the data available from Twitter to help a small business understand how to be more effective in their outreach.  I am using statistical analysis and Natural Language Programming to accomplish this.
 
 I am using one of my own Twitter Accounts in order to explore the data available to any small business.
 
 
-###NECESSARY LIBRARIES
+### NECESSARY LIBRARIES
 ```{r}
 library(tidyverse)
 
@@ -32,7 +32,7 @@ dat = TwitterData
 ```
 
 
-## Including Plots
+### Including Plots
 
 You can also embed plots, for example:
 
