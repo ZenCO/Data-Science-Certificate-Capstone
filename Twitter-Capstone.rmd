@@ -3,7 +3,6 @@ title: "Twitter Capstone"
 author: "Chase Smith"
 date: "7/24/2019"
 output:
-  pdf_document: default
   html_document: default
 ---
 
