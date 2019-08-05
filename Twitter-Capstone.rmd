@@ -6,31 +6,9 @@ output:
   html_document: default
 ---
 
-### For 07/31/19
+### For 08/5/19
 
-Talking to Frank helped me realize that while I am an expert an Excel and data overall.  All of that helps me be a pretty darned good data scientist.  My EDA is pretty spot on.
-
-I need to integrate the code that Scott Wrote.  I plan to work on that this weekend.
-
-But here is what I need to finish my EDA.  I need to be able to chunk in the time frames.  I am thinking maybe in 2 hour increments.  That way I can show which time frames are most effective.
-
-Also to Scott.  I realize my capstone project is geared towards small businesses.  And small business needs are very different than medium to large businesses.
-
-I listened to the story about the guy who charged a lot more and provided a lot less.  And that's a AMAZING take away.
-
-Small business people are pretty darned smart.  They worked their butts off to get to where they are.
-
-My project is geared towards them.  Their most important need is to feel good about their business.  Yes, I am going to skew the data gently.  But I want a small business owner to see EVERYTHING they did well.  That is something they will buy into.
-
-Then I can build a roadmap to improving their business.  Small businesses don't want the answer.  They want to know HOW to improve.  So I learned the lesson you shared... And I want to build a simple but obtainable roadmap to success.
-
-If I run into a problem that needs a world class data analyst.. I know how to reach you and Frank.
-
-But for now... most small businesses seriously need just amazing EDA.  And also some encouraging words and a small blueprint to success.
-
-Now with that in mind, I want to further work on my capstone project.  I need it to be as clean and pretty as possible.
-
-Because this is my business.  
+Splicing together all of the code. 
 
 ### Business Objective
 
@@ -45,6 +23,7 @@ I am using one of my own Twitter Accounts in order to explore the data available
 ```{r}
 knitr::opts_chunk$set(echo = TRUE)
 library("tidyverse")
+library("lubridate")
 library("tidytext")
 library("scales")
 library("wordcloud")
@@ -55,23 +34,22 @@ data("stop_words")
 
 
 #Exploratory Data Analysis
-```{r}
-raw_dat = read_csv('TwitterData.csv')
-summary(raw_dat)
-```
+
 
 ## Exploratory Data Analysis
-```{r}
 
+```{r}
+raw_dat = read_csv('TwitterData.csv')
 
 raw_dat = raw_dat %>%
 select(id = `Tweet id`, TweetText = 'Tweet text', 'time', 'impressions', 'engagements', 'retweets', 'replies', 'likes')
 
-summary(raw_dat)
-  
-```
+raw_dat = raw_dat %>%
+  mutate(year = year(time),
+         month = month(time),
+         day = day(time),
+         hour = hour(time))
 
-```{r}
 raw_dat = raw_dat %>%
   mutate(effective = if_else(engagements > 0,
                           "yes",
@@ -80,6 +58,69 @@ raw_dat = raw_dat %>%
                                   "no")))
 summary(raw_dat)
 
+
+```
+
+
+
+
+```{r}
+tweets = raw_dat %>%
+  unnest_tokens(words, TweetText, token = "tweets") %>%
+  select(id, effective, words) %>%
+  mutate(handle = if_else(str_detect(words, '^@'), TRUE, FALSE),
+         hashtag = if_else(str_detect(words, '^#'), TRUE, FALSE),
+  justtext = if_else(handle == TRUE, FALSE,
+                             if_else(hashtag == TRUE, FALSE,
+                                     TRUE)))
+tweets = tweets %>%
+  mutate(text_type = if_else(handle == TRUE, "handle",
+        if_else(justtext == TRUE, 'text','hashtag')))
+
+head(tweets)
+```
+
+
+
+```{r}
+# Hashtags
+tweets %>%
+  group_by(effective, text_type) %>%
+  count(sort = TRUE) %>%
+  ggplot(aes(x = effective, y = n, col = text_type, fill = text_type)) +
+  geom_col()
+```
+
+
+```{r}
+# Handles
+tweets %>%
+  group_by(effective, handle) %>%
+  count(sort = TRUE) %>%
+  ggplot(aes(x = handle, y = n)) +
+  geom_col() + 
+  facet_wrap(~effective)
+```
+
+```{r}
+# Hashtags
+tweets %>%
+  group_by(effective, hashtag) %>%
+  count(sort = TRUE) %>%
+  ggplot(aes(x = hashtag, y = n)) +
+  geom_col() + 
+  facet_wrap(~effective)
+```
+
+
+```{r}
+# JustText
+tweets %>%
+  group_by(effective, justtext) %>%
+  count(sort = TRUE) %>%
+  ggplot(aes(x = justtext, y = n)) +
+  geom_col() + 
+  facet_wrap(~effective)
 ```
 
 
@@ -91,8 +132,8 @@ dat = raw_dat %>%
 
 
 ```{r}
-dat %>%
-  count(word, sort = TRUE)
+tweets %>%
+  count(words, sort = TRUE)
 ```
 
 
@@ -112,7 +153,7 @@ dat %>%
   summary()
 ```
 
-### I need to figure out how to seperate all the @ data
+
 
 ```{r}
 dat %>%
@@ -125,8 +166,7 @@ dat %>%
   coord_flip()
 ```
 
-### I NEED HELP HERE
-###  THE LINE BELOW ISN"T WORKING!!!
+
 
 
 ```{r}
