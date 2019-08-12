@@ -6,21 +6,20 @@ output:
   html_document: default
 ---
 
-### For 08/5/19
+### For 08/12/19
 
-Splicing together all of the code. 
+I want to explore the spreadsheet I was working on to better explain why I think the final column is important.  If it is, we can keep it.  I hear what Scott is saying that I am overfitting the model.  I think I agree with him.  But I think that my hunch is still accurate and I want to present this in class.
+
+I didn't do work in R because I didn't want to waste my time if this is a rabbit hole.  But I put a BUNCH of thought into crafting my spreadsheet.
+
+So that is what I am presenting.
 
 ### Business Objective
-
 I am using R to fully explore the data available from Twitter to help a small business understand how to be more effective in their outreach.  I am using statistical analysis and Natural Language Programming to accomplish this.
-
 ### High Level Summary
-
 I am using one of my own Twitter Accounts in order to explore the data available to any small business.  Cool, right?
-
-
 ### NECESSARY LIBRARIES
-```{r}
+```{r setup, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library("tidyverse")
 library("lubridate")
@@ -29,58 +28,49 @@ library("scales")
 library("wordcloud")
 library("reshape2")
 data("stop_words")
-
 ```
 
 
-#Exploratory Data Analysis
-
-
 ## Exploratory Data Analysis
-
-```{r}
+```{r data_load, warning=FALSE, message=FALSE}
 raw_dat = read_csv('TwitterData.csv')
-
 raw_dat = raw_dat %>%
 select(id = `Tweet id`, TweetText = 'Tweet text', 'time', 'impressions', 'engagements', 'retweets', 'replies', 'likes')
-
 raw_dat = raw_dat %>%
   mutate(year = year(time),
          month = month(time),
          day = day(time),
          hour = hour(time))
-
 raw_dat = raw_dat %>%
   mutate(effective = if_else(engagements > 0,
                           "yes",
                           if_else(impressions > 300,
                                   "yes",
-                                  "no")))
+                                  "no"))) %>%
+  tibble::rowid_to_column("localID")
 summary(raw_dat)
-
-
 ```
 
-
-
-
 ```{r}
+tweets_features = raw_dat %>%
+  mutate(handle = if_else(str_detect(TweetText, '@'), TRUE, FALSE),
+         hashtag = if_else(str_detect(TweetText, '#'), TRUE, FALSE),
+  justtext = if_else(handle == TRUE, FALSE,
+                             if_else(hashtag == TRUE, FALSE,
+                                     TRUE))) 
+  
 tweets = raw_dat %>%
   unnest_tokens(words, TweetText, token = "tweets") %>%
-  select(id, effective, words) %>%
+  select(localID, id, effective, words) %>%
   mutate(handle = if_else(str_detect(words, '^@'), TRUE, FALSE),
          hashtag = if_else(str_detect(words, '^#'), TRUE, FALSE),
   justtext = if_else(handle == TRUE, FALSE,
                              if_else(hashtag == TRUE, FALSE,
-                                     TRUE)))
-tweets = tweets %>%
+                                     TRUE))) %>%
   mutate(text_type = if_else(handle == TRUE, "handle",
         if_else(justtext == TRUE, 'text','hashtag')))
-
-head(tweets)
+head(tweets_features)
 ```
-
-
 
 ```{r}
 # Hashtags
@@ -90,7 +80,6 @@ tweets %>%
   ggplot(aes(x = effective, y = n, col = text_type, fill = text_type)) +
   geom_col()
 ```
-
 
 ```{r}
 # Handles
@@ -112,7 +101,6 @@ tweets %>%
   facet_wrap(~effective)
 ```
 
-
 ```{r}
 # JustText
 tweets %>%
@@ -123,28 +111,21 @@ tweets %>%
   facet_wrap(~effective)
 ```
 
-
 ```{r}
-dat = raw_dat %>%
-  unnest_tokens(word, TweetText) %>%
-  anti_join(stop_words, by = 'word')
-```
-
-
-```{r}
-tweets %>%
-  count(words, sort = TRUE)
-```
-
-
-```{r}
-dat = raw_dat %>%
+dat = tweets_features %>%
+  select(localID, time, hashtag, handle, justtext, effective, TweetText) %>%
   unnest_tokens(word, TweetText) %>%
   anti_join(stop_words, by = 'word') %>%
   mutate(word = str_extract(word, "[a-z']+")) %>%
   filter(word != 'https') %>%
-  filter(word != 't.co')
+  filter(word != 't.co') %>%
+  filter(word != 't')
 head(dat)
+```
+
+```{r}
+tweets %>%
+  count(words, sort = TRUE)
 ```
 
 ```{r}
@@ -153,12 +134,11 @@ dat %>%
   summary()
 ```
 
-
-
 ```{r}
 dat %>%
+  filter(justtext == TRUE) %>%
   count(word, sort = TRUE) %>%
-  filter(n > 10) %>%
+  filter(n > 5) %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(word, n)) +
   geom_col() +
@@ -166,59 +146,52 @@ dat %>%
   coord_flip()
 ```
 
-
-
-
 ```{r}
 frequency = dat %>% 
+  filter(handle == FALSE) %>%
   count(effective, word) %>%
   group_by(effective) %>%
   mutate(proportion = n / sum(n)) %>%
   select(-n) %>%
   spread(effective, proportion) 
-head(frequency)
+frequency$no[is.na(frequency$no)] = 0
+frequency$yes[is.na(frequency$yes)] = 0
+frequency %>%
+  arrange(-yes)
 ```
-
 
 ```{r}
-ggplot(frequency, aes(x = no, y = yes, color = abs(yes - no))) +
-  geom_abline(color = "gray40", lty = 2) +
-  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
-  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
-  scale_x_log10(labels = percent_format()) +
-  scale_y_log10(labels = percent_format()) +
-  scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
-  theme(legend.position="none") +
-  labs(y = "Word", x = NULL)
+frequency %>%
+  filter(yes != 0 & no != 0 ) %>%
+  ggplot(aes(x = no, y = yes, color = abs(yes - no))) +
+    geom_abline(color = "gray40", lty = 2) +
+    geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
+    geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+    scale_x_log10(labels = percent_format()) +
+    scale_y_log10(labels = percent_format()) +
+    scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
+    theme(legend.position="none") +
+    labs(y = "Word", x = NULL)
 ```
-
 
 ```{r}
 cor.test(x = frequency$no, y = frequency$yes)
 ```
 
+# Saving Data for Excel Purposes
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+frequency %>% write_csv('frequency.csv')
+tweets %>% write_csv('tweets.csv')
+tweets_features %>% write_csv('tweets_features.csv')
+stop_words %>% write_csv('stop_words.csv')
+raw_dat %>% write_csv('raw_dat.csv')
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+
+
+
+
