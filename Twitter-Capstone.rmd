@@ -1,12 +1,12 @@
 ---
 title: "Twitter Capstone"
 author: "Chase Smith"
-date: "7/24/2019"
+date: "9/5/2019"
 output:
   html_document: default
 ---
 
-### For 08/12/19
+### For 05/5/19
 
 I want to explore the spreadsheet I was working on to better explain why I think the final column is important.  If it is, we can keep it.  I hear what Scott is saying that I am overfitting the model.  I think I agree with him.  But I think that my hunch is still accurate and I want to present this in class.
 
